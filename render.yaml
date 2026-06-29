@@ -1,0 +1,22 @@
+services:
+  - type: web_service
+    name: fitmind-backend
+    env: node
+    plan: free
+    branch: main
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    rootDir: backend
+    envVars:
+      - key: JWT_SECRET
+        fromDatabase: false
+        value: "replace-with-a-strong-secret"
+      - key: FRONTEND_URL
+        fromDatabase: false
+        value: "https://fitmind-fitness.netlify.app"
+      - key: AI_PROVIDER
+        fromDatabase: false
+        value: "anthropic"
+      - key: AI_API_KEY
+        fromDatabase: false
+        value: "replace-with-your-anthropic-key"
