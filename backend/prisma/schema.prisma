@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  name         String
+  role         String     @default("user")
+  createdAt    DateTime   @default(now())
+  profile      Profile?
+  goals        Goal[]
+  messages     Message[]
+  plans        Plan[]
+  metrics      Metric[]
+  memories     Memory[]
+}
+
+model Profile {
+  id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String   @unique
+  birthYear  Int?
+  birthMonth Int?
+  gender     String?
+  height     Int?
+  weight     Float?
+  level      String?
+}
+
+model Goal {
+  id      String   @id @default(cuid())
+  user    User     @relation(fields: [userId], references: [id])
+  userId  String
+  label   String
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  role      String
+  content   String
+  meta      String?
+  createdAt DateTime @default(now())
+}
+
+model Plan {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  title     String
+  metadata  String?
+  createdAt DateTime  @default(now())
+  days      PlanDay[]
+}
+
+model PlanDay {
+  id       String     @id @default(cuid())
+  plan     Plan       @relation(fields: [planId], references: [id])
+  planId   String
+  name     String
+  order    Int
+  exercises Exercise[]
+}
+
+model Exercise {
+  id       String  @id @default(cuid())
+  day      PlanDay  @relation(fields: [dayId], references: [id])
+  dayId    String
+  name     String
+  sets     Int
+  reps     String
+  rest     String
+  notes    String?
+  type     String  @default("main")
+}
+
+model Metric {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  date      DateTime
+  weight    Float?
+  bmi       Float?
+  fat       Float?
+  muscle    Float?
+  waist     Float?
+  chest     Float?
+  arms      Float?
+  bp        String?
+  extra     String?
+
+  @@unique([userId, date])
+}
+
+model Memory {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+}

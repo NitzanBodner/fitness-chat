@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FitMind — AI Fitness Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#080a0f;--surface:#0e1117;--surface2:#141820;--surface3:#1c2230;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --accent:#4fffb0;--accent2:#00d4ff;--accent3:#7c6fff;
+  --text:#e8edf5;--text2:#8a95a8;--text3:#4a5568;--danger:#ff4f6a;
+  --font:'Space Grotesk',sans-serif;--mono:'DM Mono',monospace;
+  --radius:14px;--radius-sm:8px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(79,255,176,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(79,255,176,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+.orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0;opacity:.15;}
+.orb-1{width:400px;height:400px;background:var(--accent);top:-100px;right:-100px;}
+.orb-2{width:300px;height:300px;background:var(--accent3);bottom:100px;left:-80px;}
+
+/* ── AUTH ── */
+#auth-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:100;background:var(--bg);}
+.auth-card{position:relative;z-index:1;width:420px;background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:48px 40px;animation:slideUp .5s cubic-bezier(.16,1,.3,1);}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:32px;}
+.auth-logo-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.auth-logo-text{font-size:22px;font-weight:700;letter-spacing:-.5px;word-spacing:0;}
+.auth-logo-text span{color:var(--accent);}
+.auth-title{font-size:28px;font-weight:700;letter-spacing:-.5px;margin-bottom:8px;}
+.auth-sub{color:var(--text2);font-size:14px;margin-bottom:32px;}
+.input-group{margin-bottom:16px;}
+.input-group label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;}
+.input-group input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px 16px;font-family:var(--font);font-size:15px;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s;}
+.input-group input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,255,176,.1);}
+.input-group input::placeholder{color:var(--text3);}
+.btn-primary{width:100%;padding:14px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;transition:all .2s;}
+.btn-primary:hover{background:#5fffbc;transform:translateY(-1px);}
+.auth-switch{text-align:center;margin-top:20px;font-size:13px;color:var(--text2);}
+.auth-switch a{color:var(--accent);cursor:pointer;font-weight:500;}
+.auth-error{background:rgba(255,79,106,.1);border:1px solid rgba(255,79,106,.3);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--danger);margin-bottom:16px;display:none;}
+
+/* ── APP SHELL ── */
+#app-screen{display:none;height:100vh;flex-direction:column;position:relative;z-index:1;}
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:56px;background:rgba(14,17,23,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);position:relative;z-index:10;flex-shrink:0;}
+.header-logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;letter-spacing:-.3px;}
+.header-logo .dot{color:var(--accent);}
+.header-right{display:flex;align-items:center;gap:12px;}
+.user-badge{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border2);border-radius:100px;padding:6px 14px 6px 8px;font-size:13px;color:var(--text2);}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--bg);}
+.btn-logout{background:transparent;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:7px 14px;font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer;transition:all .2s;}
+.btn-logout:hover{border-color:var(--danger);color:var(--danger);}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:4px;padding:0 28px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.tab{padding:12px 20px;font-size:14px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;margin-bottom:-1px;}
+.tab:hover{color:var(--text2);}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* ── PAGES ── */
+.page{display:none;flex:1;overflow:hidden;}
+.page.active{display:flex;}
+
+/* ── CHAT PAGE ── */
+#page-chat{flex-direction:row;}
+.chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.messages{flex:1;overflow-y:auto;padding:32px 40px;display:flex;flex-direction:column;gap:20px;}
+.messages::-webkit-scrollbar{width:4px;}
+.messages::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.msg{display:flex;gap:14px;animation:msgIn .3s cubic-bezier(.16,1,.3,1);max-width:780px;}
+@keyframes msgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{flex-direction:row-reverse;align-self:flex-end;}
+.msg-avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;}
+.msg.ai .msg-avatar{background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--bg);font-size:16px;}
+.msg.user .msg-avatar{background:linear-gradient(135deg,var(--accent3),#a78bfa);color:#fff;}
+.msg-bubble{padding:14px 18px;border-radius:var(--radius);font-size:15px;line-height:1.65;max-width:640px;white-space:pre-wrap;}
+.msg.ai .msg-bubble{background:var(--surface2);border:1px solid var(--border);border-top-right-radius:var(--radius);border-top-left-radius:4px;}
+.msg.user .msg-bubble{background:rgba(79,255,176,.1);border:1px solid rgba(79,255,176,.2);border-top-left-radius:var(--radius);border-top-right-radius:4px;}
+.msg-meta{font-size:11px;color:var(--text3);margin-top:6px;font-family:var(--mono);}
+.msg.user .msg-meta{text-align:left;}
+.save-as-plan-btn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:rgba(79,255,176,.1);border:1px solid rgba(79,255,176,.3);border-radius:100px;padding:6px 14px;font-family:var(--font);font-size:12px;color:var(--accent);cursor:pointer;transition:all .2s;}
+.save-as-plan-btn:hover{background:rgba(79,255,176,.2);}
+.typing-bubble{display:flex;gap:4px;align-items:center;padding:14px 18px;}
+.typing-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:typingBounce 1.2s infinite;}
+.typing-dot:nth-child(2){animation-delay:.2s;}
+.typing-dot:nth-child(3){animation-delay:.4s;}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}
+.quick-prompts{display:flex;gap:8px;padding:0 40px 16px;flex-wrap:wrap;}
+.quick-btn{background:var(--surface2);border:1px solid var(--border2);border-radius:100px;padding:7px 16px;font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer;transition:all .2s;white-space:nowrap;}
+.quick-btn:hover{border-color:var(--accent);color:var(--accent);}
+.input-area{padding:16px 40px 24px;border-top:1px solid var(--border);background:rgba(14,17,23,.6);backdrop-filter:blur(20px);}
+.input-row{display:flex;gap:12px;align-items:flex-end;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 16px;transition:border-color .2s,box-shadow .2s;}
+.input-row:focus-within{border-color:rgba(79,255,176,.4);box-shadow:0 0 0 3px rgba(79,255,176,.06);}
+.chat-input{flex:1;background:transparent;border:none;outline:none;font-family:var(--font);font-size:15px;color:var(--text);resize:none;max-height:120px;line-height:1.5;}
+.chat-input::placeholder{color:var(--text3);}
+.send-btn{width:38px;height:38px;background:var(--accent);border:none;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
+.send-btn:hover{background:#5fffbc;transform:scale(1.05);}
+.send-btn svg{width:18px;height:18px;color:var(--bg);}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:12px;color:var(--text3);padding-bottom:60px;}
+.empty-icon{width:64px;height:64px;background:var(--surface2);border:1px solid var(--border);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:4px;}
+.empty-state h3{font-size:18px;font-weight:600;color:var(--text2);}
+.empty-state p{font-size:14px;text-align:center;max-width:320px;line-height:1.6;}
+
+/* ── SIDEBAR ── */
+.sidebar{width:280px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;padding:20px;gap:8px;overflow-y:auto;}
+.sidebar-section{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:4px 0;margin-top:8px;}
+.profile-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:8px;}
+.profile-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.profile-field{display:flex;flex-direction:column;gap:4px;}
+.profile-field label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;}
+.profile-field input,.profile-field select{background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-family:var(--font);font-size:13px;color:var(--text);outline:none;width:90px;transition:border-color .2s;}
+.profile-field input:focus,.profile-field select:focus{border-color:var(--accent);}
+.profile-field select option{background:var(--surface2);}
+.save-btn{width:100%;padding:9px;background:rgba(79,255,176,.1);border:1px solid rgba(79,255,176,.3);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:500;color:var(--accent);cursor:pointer;transition:all .2s;margin-top:4px;}
+.save-btn:hover{background:rgba(79,255,176,.15);}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.stat-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;}
+.stat-box .val{font-size:20px;font-weight:700;color:var(--accent);font-family:var(--mono);}
+.stat-box .lbl{font-size:11px;color:var(--text3);margin-top:2px;}
+.goal-chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface3);border:1px solid var(--border);border-radius:100px;padding:6px 12px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .2s;margin:3px;}
+.goal-chip.active{background:rgba(79,255,176,.1);border-color:var(--accent);color:var(--accent);}
+
+/* ── PLAN PAGE ── */
+#page-plan{flex-direction:column;overflow-y:auto;padding:32px 40px;gap:24px;}
+/* ── METRICS PAGE ── */
+#page-metrics{flex-direction:column;overflow:hidden;}
+.metrics-layout{display:grid;grid-template-columns:300px 1fr;grid-template-rows:1fr;width:100%;height:100%;overflow:hidden;}
+/* LEFT panel */
+.metrics-panel{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.metrics-panel-top{padding:20px 20px 0;flex-shrink:0;}
+.metrics-panel-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+.m-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;}
+.m-input{width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-family:var(--font);font-size:13px;color:var(--text);outline:none;transition:border-color .2s;margin-bottom:10px;}
+.m-input:focus{border-color:var(--accent);}
+/* metric selector tabs */
+.metric-tabs{display:flex;flex-direction:column;gap:4px;padding:12px 20px;overflow-y:auto;flex:1;}
+.metric-radio{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:13px;color:var(--text2);transition:all .2s;flex-shrink:0;}
+.metric-radio:hover{border-color:var(--border2);color:var(--text);}
+.metric-radio.active{background:rgba(79,255,176,.08);border-color:var(--accent);color:var(--accent);}
+.metric-radio-left{display:flex;align-items:center;gap:8px;}
+.metric-latest{font-family:var(--mono);font-size:12px;opacity:.7;}
+/* RIGHT main */
+.metrics-main{display:grid;grid-template-rows:auto 1fr;overflow:hidden;padding:24px 28px;gap:20px;}
+.metrics-chart-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;display:flex;flex-direction:column;}
+.metrics-chart-box canvas{flex:1;}
+.metrics-history-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;overflow-y:auto;}
+.history-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.history-row:last-child{border-bottom:none;}
+.history-date{color:var(--text3);font-family:var(--mono);font-size:12px;flex-shrink:0;}
+.history-val{font-weight:600;color:var(--accent);font-family:var(--mono);}
+.delta-badge{font-size:11px;padding:2px 7px;border-radius:100px;font-family:var(--mono);margin-right:4px;}
+.delta-up{background:rgba(255,79,106,.1);color:var(--danger);}
+.delta-down{background:rgba(79,255,176,.1);color:var(--accent);}
+.delta-same{background:var(--surface3);color:var(--text3);}
+
+.plan-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.plan-title{font-size:26px;font-weight:700;letter-spacing:-.5px;}
+.plan-subtitle{font-size:14px;color:var(--text2);margin-top:4px;}
+.plan-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:16px;color:var(--text3);min-height:60vh;}
+.plan-empty .big-icon{font-size:64px;}
+.plan-empty h3{font-size:20px;font-weight:600;color:var(--text2);}
+.plan-empty p{font-size:14px;text-align:center;max-width:380px;line-height:1.7;}
+.plan-empty .go-chat{background:var(--accent);color:var(--bg);border:none;border-radius:var(--radius-sm);padding:12px 24px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:8px;}
+.plan-empty .go-chat:hover{background:#5fffbc;}
+.workout-tabs{display:flex;gap:8px;flex-wrap:wrap;}
+.w-tab{padding:8px 20px;background:var(--surface2);border:1px solid var(--border2);border-radius:100px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .2s;}
+.w-tab.active{background:rgba(79,255,176,.1);border-color:var(--accent);color:var(--accent);}
+.workout-day{display:none;}
+.workout-day.active{display:block;}
+.day-label{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;}
+.exercise-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;}
+.ex-section-label{grid-column:1/-1;display:flex;align-items:center;gap:10px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-top:4px;}
+.ex-section-label span{flex:1;height:1px;background:var(--border);}
+.ex-section-warm{color:#ff9f43;}
+.ex-section-main{color:var(--accent);}
+.ex-section-cool{color:var(--accent2);}
+.ex-card.warm{border-color:rgba(255,159,67,.2);}
+.ex-card.warm::before{background:linear-gradient(90deg,#ff9f43,#ffcc80);}
+.ex-card.cool{border-color:rgba(0,212,255,.2);}
+.ex-card.cool::before{background:linear-gradient(90deg,var(--accent2),#a8edea);}
+.ex-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:border-color .2s;position:relative;overflow:hidden;}
+.ex-card:hover{border-color:var(--border2);}
+.ex-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:0;transition:opacity .3s;}
+.ex-card:hover::before{opacity:1;}
+.ex-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;}
+.ex-anim{width:80px;height:80px;background:var(--surface3);border-radius:12px;flex-shrink:0;border:1px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:32px;}
+.ex-anim img{width:100%;height:100%;object-fit:cover;border-radius:12px;}
+.ex-anim img.loading{opacity:0;}
+.ex-anim img.loaded{opacity:1;transition:opacity .3s;}
+.ex-info{flex:1;}
+.ex-name{font-size:15px;font-weight:600;margin-bottom:4px;}
+.ex-muscle{font-size:12px;color:var(--accent);background:rgba(79,255,176,.1);border-radius:100px;padding:2px 10px;display:inline-block;margin-bottom:6px;}
+.ex-sets-summary{font-size:13px;color:var(--text2);}
+.ex-actions{display:flex;gap:8px;margin-top:12px;}
+.ex-btn{flex:1;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;transition:all .2s;text-align:center;}
+.ex-btn:hover{border-color:var(--border2);color:var(--text);}
+.ex-btn.yt{color:var(--danger);border-color:rgba(255,79,106,.2);}
+.ex-btn.yt:hover{background:rgba(255,79,106,.1);}
+.sets-table{width:100%;border-collapse:collapse;margin-top:12px;display:none;}
+.sets-table.open{display:table;}
+.sets-table th{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);}
+.sets-table td{padding:7px 8px;text-align:center;font-size:13px;border-bottom:1px solid var(--border);}
+.sets-table tr:last-child td{border-bottom:none;}
+.weight-input{background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-family:var(--mono);font-size:13px;color:var(--accent);width:70px;outline:none;text-align:center;transition:border-color .2s;}
+.weight-input:focus{border-color:var(--accent);}
+.set-done{width:20px;height:20px;border-radius:50%;border:2px solid var(--border2);cursor:pointer;transition:all .2s;display:inline-block;}
+.set-done.checked{background:var(--accent);border-color:var(--accent);}
+.pr-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);border-radius:100px;padding:2px 8px;font-size:11px;color:gold;margin-right:4px;}
+.save-workout-btn{background:var(--accent);color:var(--bg);border:none;border-radius:var(--radius-sm);padding:12px 28px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;}
+.save-workout-btn:hover{background:#5fffbc;transform:translateY(-1px);}
+.plan-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+
+/* ── NOTIF ── */
+.notif{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--accent);border-radius:100px;padding:10px 20px;font-size:13px;color:var(--accent);z-index:999;transition:transform .3s cubic-bezier(.16,1,.3,1);white-space:nowrap;}
+.notif.show{transform:translateX(-50%) translateY(0);}
+
+/* ── SVG exercise animations ── */
+.ex-anim svg{width:44px;height:44px;}
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- ══ AUTH ══ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">💪</div>
+      <div class="auth-logo-text">Mind<span style="color:var(--accent);">Fit</span></div>
+    </div>
+    <h1 class="auth-title" id="auth-title">ברוך הבא</h1>
+    <p class="auth-sub" id="auth-sub">היכנס עם האימייל שלך כדי להמשיך</p>
+    <div class="auth-error" id="auth-error"></div>
+    <div class="input-group"><label>אימייל</label><input type="email" id="auth-email" placeholder="you@example.com"/></div>
+    <div class="input-group" id="name-group" style="display:none;"><label>שם</label><input type="text" id="auth-name" placeholder="השם שלך"/></div>
+    <button class="btn-primary" onclick="handleAuth()">כניסה</button>
+    <p class="auth-switch" id="auth-switch">אין לך חשבון? <a onclick="toggleAuthMode()">הירשם</a></p>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app-screen">
+  <div class="header">
+    <div class="header-logo"><span>💪</span>&thinsp;Mind<span class="dot">Fit</span></div>
+    <div class="header-right">
+      <div class="user-badge"><div class="user-avatar" id="hdr-avatar">N</div><span id="hdr-name">—</span></div>
+      <button onclick="clearChat()" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:7px 14px;font-family:var(--font);font-size:13px;color:var(--text3);cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--danger)';this.style.color='var(--danger)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">🗑️ נקה שיחה</button>
+      <button class="btn-logout" onclick="logout()">יציאה</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('chat')">💬 מאמן AI</div>
+    <div class="tab" onclick="showTab('plan')" id="plan-tab">📋 תוכנית אימונים</div>
+    <div class="tab" onclick="showTab('metrics')" id="metrics-tab">📊 מדדי גוף</div>
+  </div>
+
+  <!-- CHAT PAGE -->
+  <div class="page active" id="page-chat">
+    <div class="chat-area">
+      <div class="messages" id="messages">
+        <div class="empty-state" id="empty-state">
+          <div class="empty-icon">🤖</div>
+          <h3>המאמן האישי שלך מוכן</h3>
+          <p>שאל אותי על תוכנית אימונים, תזונה, שיפור ביצועים. כשתבקש תוכנית — היא תופיע אוטומטית בעמוד "תוכנית אימונים"</p>
+        </div>
+      </div>
+      <div class="quick-prompts" id="quick-prompts">
+        <button class="quick-btn" onclick="quickSend('צור לי תוכנית אימונים לשלושה ימים: Push Pull Legs')">📋 תוכנית PPL</button>
+        <button class="quick-btn" onclick="quickSend('מה כדאי לאכול לפני אימון?')">🥗 תזונה</button>
+        <button class="quick-btn" onclick="quickSend('איך משפרים סיבולת ריצה?')">🏃 סיבולת</button>
+        <button class="quick-btn" onclick="quickSend('תרגילים לחיזוק הגב התחתון')">💪 חיזוק גב</button>
+      </div>
+      <div class="input-area">
+        <div class="input-row">
+          <textarea class="chat-input" id="chat-input" placeholder="שאל את המאמן שלך..." rows="1"
+            onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <button class="send-btn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </div>
+
+      </div>
+    </div>
+    <div class="sidebar">
+      <div class="sidebar-section">הפרופיל שלי</div>
+      <div class="profile-card">
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">תאריך לידה</div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <select id="p-birth-month" style="flex:1;background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:7px 8px;font-family:var(--font);font-size:13px;color:var(--text);outline:none;" onchange="updateAgeDisplay()">
+              <option value="">חודש</option>
+              <option value="1">ינואר</option><option value="2">פברואר</option><option value="3">מרץ</option>
+              <option value="4">אפריל</option><option value="5">מאי</option><option value="6">יוני</option>
+              <option value="7">יולי</option><option value="8">אוגוסט</option><option value="9">ספטמבר</option>
+              <option value="10">אוקטובר</option><option value="11">נובמבר</option><option value="12">דצמבר</option>
+            </select>
+            <input type="number" id="p-birth-year" placeholder="שנה" min="1940" max="2015"
+              style="width:76px;background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:7px 8px;font-family:var(--font);font-size:13px;color:var(--text);outline:none;"
+              oninput="updateAgeDisplay()"/>
+          </div>
+          <div id="age-display" style="font-size:12px;color:var(--accent);margin-top:5px;font-family:var(--mono);min-height:16px;"></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">משקל (ק"ג)</div>
+            <input type="number" id="p-weight" placeholder="70"
+              style="width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:7px 8px;font-family:var(--font);font-size:13px;color:var(--text);outline:none;"/>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">גובה (ס"מ)</div>
+            <input type="number" id="p-height" placeholder="175"
+              style="width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:7px 8px;font-family:var(--font);font-size:13px;color:var(--text);outline:none;"/>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">מין</div>
+            <select id="p-gender" style="width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:7px 8px;font-family:var(--font);font-size:13px;color:var(--text);outline:none;">
+              <option value="">בחר</option>
+              <option value="זכר">זכר</option>
+              <option value="נקבה">נקבה</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">רמת פעילות</div>
+            <select id="p-level" style="width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:7px 8px;font-family:var(--font);font-size:13px;color:var(--text);outline:none;">
+              <option value="">בחר</option>
+              <option>מתחיל</option><option>בינוני</option><option>מתקדם</option><option>אתלט</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="save-btn" onclick="saveProfile()">💾 שמור פרופיל</button>
+      </div>
+      <div class="sidebar-section">מטרות</div>
+      <div>
+        <span class="goal-chip" onclick="toggleGoal(this,'ירידה במשקל')">⚡ ירידה במשקל</span>
+        <span class="goal-chip" onclick="toggleGoal(this,'בניית שריר')">💪 בניית שריר</span>
+        <span class="goal-chip" onclick="toggleGoal(this,'שיפור סיבולת')">🏃 סיבולת</span>
+        <span class="goal-chip" onclick="toggleGoal(this,'חיזוק ליבה')">🎯 ליבה</span>
+        <span class="goal-chip" onclick="toggleGoal(this,'גמישות')">🧘 גמישות</span>
+        <span class="goal-chip" onclick="toggleGoal(this,'בריאות כללית')">❤️ בריאות</span>
+      </div>
+      <div class="sidebar-section" style="margin-top:16px;">סטטיסטיקות</div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="val" id="stat-msgs">0</div><div class="lbl">הודעות</div></div>
+        <div class="stat-box"><div class="val" id="stat-days">0</div><div class="lbl">ימי אימון</div></div>
+        <div class="stat-box"><div class="val" id="stat-goals">0</div><div class="lbl">מטרות</div></div>
+        <div class="stat-box"><div class="val" id="stat-exs">0</div><div class="lbl">תרגילים</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAN PAGE -->
+  <div class="page" id="page-plan">
+    <div id="plan-empty" class="plan-empty">
+      <div class="big-icon">🏋️</div>
+      <h3>עדיין אין תוכנית אימונים</h3>
+      <p>לך לצ'אט עם המאמן ובקש ממנו לבנות לך תוכנית.<br/>למשל: <em>"צור לי תוכנית PPL לשלושה ימים"</em><br/>התוכנית תופיע כאן אוטומטית!</p>
+      <button class="go-chat" onclick="showTab('chat')">💬 דבר עם המאמן</button>
+    </div>
+    <div id="plan-content" style="display:none;width:100%;">
+      <div class="plan-header">
+        <div>
+          <div class="plan-title" id="plan-title">תוכנית אימונים</div>
+          <div class="plan-subtitle" id="plan-subtitle"></div>
+        </div>
+        <div class="plan-actions">
+          <button class="save-workout-btn" onclick="saveWorkoutWeights()">💾 שמור משקלים</button>
+          <button class="save-btn" style="width:auto;padding:9px 18px;" onclick="clearPlan()">🗑️ נקה תוכנית</button>
+        </div>
+      </div>
+      <div class="workout-tabs" id="workout-tabs"></div>
+      <div id="workout-days"></div>
+    </div>
+  </div>
+
+  <!-- METRICS PAGE -->
+  <div class="page" id="page-metrics">
+    <div class="metrics-layout">
+
+      <!-- LEFT: selector + add entry -->
+      <div class="metrics-panel">
+        <div class="metrics-panel-top">
+          <div class="metrics-panel-title">מדדים</div>
+        </div>
+        <div class="metric-tabs" id="metric-selector"></div>
+        <div style="padding:0 20px 16px;flex-shrink:0;border-top:1px solid var(--border);padding-top:14px;">
+          <div class="metrics-panel-title" style="margin-bottom:10px;">הוסף מדידה</div>
+          <input type="date" id="m-date" style="width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-family:var(--font);font-size:13px;color:var(--text);outline:none;margin-bottom:10px;"/>
+          <div id="metrics-fields"></div>
+          <button class="save-btn" onclick="saveMetricsEntry()">💾 שמור מדידה</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: chart + history -->
+      <div class="metrics-main">
+        <div class="metrics-chart-box">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div id="chart-title" style="font-size:15px;font-weight:600;color:var(--text2);">בחר מדד</div>
+            <button onclick="clearMetricsHistory()" style="background:transparent;border:1px solid rgba(255,79,106,.25);border-radius:6px;padding:4px 12px;font-family:var(--font);font-size:12px;color:var(--danger);cursor:pointer;">🗑️ מחק הכל</button>
+          </div>
+          <div style="position:relative;height:200px;">
+            <canvas id="metrics-canvas"></canvas>
+          </div>
+        </div>
+        <div class="metrics-history-box">
+          <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px;" id="history-label">היסטוריה</div>
+          <div id="metrics-history"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<!-- PLAN BUILDER MODAL -->
+<div id="plan-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:32px;width:480px;max-width:90vw;">
+    <div style="font-size:18px;font-weight:700;margin-bottom:6px;">📋 בנה תוכנית אימונים</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:24px;">תאר את התוכנית שאתה רוצה ואני אבנה אותה</div>
+    <textarea id="plan-prompt" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:14px;font-family:var(--font);font-size:14px;color:var(--text);outline:none;resize:none;height:120px;margin-bottom:16px;" placeholder="למשל: תוכנית PPL לשלושה ימים, אני מתאמן בחדר כושר עם משקולות, רמה בינונית, כל אימון שעה"></textarea>
+    <div style="display:flex;gap:10px;">
+      <button onclick="submitPlanBuilder()" style="flex:1;padding:12px;background:var(--accent);color:var(--bg);border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;">✨ צור תוכנית</button>
+      <button onclick="closePlanModal()" style="padding:12px 20px;background:transparent;border:1px solid var(--border2);border-radius:10px;font-family:var(--font);font-size:14px;color:var(--text2);cursor:pointer;">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── exercise data: emoji + muscle + YouTube search ──
+const EX_META = {
+  default:{emoji:'💪',muscle:'שרירים',yt:'exercise tutorial',gif:null},
+  'לחיצת חזה':{emoji:'🏋️',muscle:'חזה',yt:'bench press form',gif:'https://exrx.net/AnimatedEx/Pectoralis/BBBenchPress.gif'},
+  'bench press':{emoji:'🏋️',muscle:'חזה',yt:'bench press form',gif:'https://exrx.net/AnimatedEx/Pectoralis/BBBenchPress.gif'},
+  "בנץ' פרס":{emoji:'🏋️',muscle:'חזה',yt:'bench press form',gif:'https://exrx.net/AnimatedEx/Pectoralis/BBBenchPress.gif'},
+  'לחיצת חזה עם משקולות':{emoji:'🏋️',muscle:'חזה',yt:'dumbbell bench press',gif:'https://exrx.net/AnimatedEx/Pectoralis/DBBenchPress.gif'},
+  'פשיטת חזה':{emoji:'💪',muscle:'חזה תחתון',yt:'chest flyes dumbbell',gif:'https://exrx.net/AnimatedEx/Pectoralis/DBFly.gif'},
+  'שכיבות סמיכה':{emoji:'⬆️',muscle:'חזה / כתפיים',yt:'push up proper form',gif:'https://exrx.net/AnimatedEx/Pectoralis/PushUp.gif'},
+  'push up':{emoji:'⬆️',muscle:'חזה / כתפיים',yt:'push up proper form',gif:'https://exrx.net/AnimatedEx/Pectoralis/PushUp.gif'},
+  'מתח':{emoji:'🔝',muscle:'גב / ביצפס',yt:'pull up form tutorial',gif:'https://exrx.net/AnimatedEx/Latissimus/PullUp.gif'},
+  'pull up':{emoji:'🔝',muscle:'גב / ביצפס',yt:'pull up form tutorial',gif:'https://exrx.net/AnimatedEx/Latissimus/PullUp.gif'},
+  'lat pulldown':{emoji:'🔝',muscle:'גב',yt:'lat pulldown form',gif:'https://exrx.net/AnimatedEx/Latissimus/CablePulldown.gif'},
+  'משיכות לסנטר':{emoji:'🔝',muscle:'גב',yt:'lat pulldown form',gif:'https://exrx.net/AnimatedEx/Latissimus/CablePulldown.gif'},
+  'חתירה':{emoji:'🚣',muscle:'גב',yt:'barbell row form',gif:'https://exrx.net/AnimatedEx/Latissimus/BBRow.gif'},
+  'barbell row':{emoji:'🚣',muscle:'גב',yt:'barbell row form',gif:'https://exrx.net/AnimatedEx/Latissimus/BBRow.gif'},
+  'משיכות גב':{emoji:'🚣',muscle:'גב',yt:'barbell row form',gif:'https://exrx.net/AnimatedEx/Latissimus/BBRow.gif'},
+  'חתירה עם משקולת':{emoji:'🚣',muscle:'גב',yt:'dumbbell row form',gif:'https://exrx.net/AnimatedEx/Latissimus/DBRow.gif'},
+  'סקוואט':{emoji:'🦵',muscle:'רגליים',yt:'squat form tutorial',gif:'https://exrx.net/AnimatedEx/Quadriceps/BBSquat.gif'},
+  'squat':{emoji:'🦵',muscle:'רגליים',yt:'squat form tutorial',gif:'https://exrx.net/AnimatedEx/Quadriceps/BBSquat.gif'},
+  'לחיצת רגליים':{emoji:'🦵',muscle:'ארבע ראשי',yt:'leg press form',gif:'https://exrx.net/AnimatedEx/Quadriceps/SLegPress.gif'},
+  'leg press':{emoji:'🦵',muscle:'ארבע ראשי',yt:'leg press form',gif:'https://exrx.net/AnimatedEx/Quadriceps/SLegPress.gif'},
+  'לחיצת כתפיים':{emoji:'🫸',muscle:'כתפיים',yt:'overhead press form',gif:'https://exrx.net/AnimatedEx/Deltoid/DBShoulderPress.gif'},
+  'shoulder press':{emoji:'🫸',muscle:'כתפיים',yt:'shoulder press form',gif:'https://exrx.net/AnimatedEx/Deltoid/DBShoulderPress.gif'},
+  'כפיפות מרפק':{emoji:'💪',muscle:'ביצפס',yt:'bicep curl form',gif:'https://exrx.net/AnimatedEx/Biceps/BBCurl.gif'},
+  'bicep curl':{emoji:'💪',muscle:'ביצפס',yt:'bicep curl form',gif:'https://exrx.net/AnimatedEx/Biceps/BBCurl.gif'},
+  'פשיטות מרפק':{emoji:'💪',muscle:'טריצפס',yt:'tricep extension form',gif:'https://exrx.net/AnimatedEx/Triceps/CableExtension.gif'},
+  'tricep':{emoji:'💪',muscle:'טריצפס',yt:'tricep extension form',gif:'https://exrx.net/AnimatedEx/Triceps/CableExtension.gif'},
+  'דדליפט':{emoji:'🏋️',muscle:'גב תחתון / ירכיים',yt:'deadlift form',gif:'https://exrx.net/AnimatedEx/GluteusMaximus/BBDeadlift.gif'},
+  'deadlift':{emoji:'🏋️',muscle:'גב תחתון / ירכיים',yt:'deadlift form',gif:'https://exrx.net/AnimatedEx/GluteusMaximus/BBDeadlift.gif'},
+  'לאנגס':{emoji:'🦵',muscle:'ירכיים',yt:'lunges form',gif:'https://exrx.net/AnimatedEx/Quadriceps/DBLunge.gif'},
+  'lunge':{emoji:'🦵',muscle:'ירכיים',yt:'lunges form',gif:'https://exrx.net/AnimatedEx/Quadriceps/DBLunge.gif'},
+  'פלאנק':{emoji:'🧘',muscle:'ליבה',yt:'plank proper form',gif:'https://exrx.net/AnimatedEx/RectusAbdominis/Plank.gif'},
+  'plank':{emoji:'🧘',muscle:'ליבה',yt:'plank proper form',gif:'https://exrx.net/AnimatedEx/RectusAbdominis/Plank.gif'},
+  'כפיפות בטן':{emoji:'🫀',muscle:'ליבה',yt:'crunches form',gif:'https://exrx.net/AnimatedEx/RectusAbdominis/Crunch.gif'},
+  'crunch':{emoji:'🫀',muscle:'ליבה',yt:'crunches form',gif:'https://exrx.net/AnimatedEx/RectusAbdominis/Crunch.gif'},
+  'הליכה':{emoji:'🚶',muscle:'קרדיו',yt:'treadmill walking',gif:null},
+  'ריצה':{emoji:'🏃',muscle:'קרדיו',yt:'running form',gif:null},
+};
+
+
+function getMeta(name) {
+  const lower = name.toLowerCase();
+  for (const [k,v] of Object.entries(EX_META)) {
+    if (lower.includes(k.toLowerCase())) return v;
+  }
+  return EX_META.default;
+}
+
+// ── storage ──
+const USERS_KEY='fitmind_users', CUR_KEY='fitmind_current';
+let currentUser=null, isRegister=false;
+
+function getUsers(){try{return JSON.parse(localStorage.getItem(USERS_KEY)||'{}')}catch{return{}}}
+function saveUsers(u){localStorage.setItem(USERS_KEY,JSON.stringify(u))}
+function getUD(){const u=getUsers();return u[currentUser]||(u[currentUser]={name:'',messages:[],profile:{},goals:[],stats:{days:[],streak:0},plan:null,weights:{}},u)}
+function saveUD(data){const u=getUsers();u[currentUser]=data;saveUsers(u);}
+
+// ── AUTH ──
+function toggleAuthMode(){
+  isRegister=!isRegister;
+  document.getElementById('auth-title').textContent=isRegister?'צור חשבון':'ברוך הבא';
+  document.getElementById('auth-sub').textContent=isRegister?'הירשם עם האימייל שלך':'היכנס עם האימייל שלך';
+  document.querySelector('#auth-screen .btn-primary').textContent=isRegister?'הירשם':'כניסה';
+  document.getElementById('auth-switch').innerHTML=isRegister?'יש לך חשבון? <a onclick="toggleAuthMode()">כניסה</a>':'אין לך חשבון? <a onclick="toggleAuthMode()">הירשם</a>';
+  document.getElementById('name-group').style.display=isRegister?'block':'none';
+  document.getElementById('auth-error').style.display='none';
+}
+function handleAuth(){
+  const email=document.getElementById('auth-email').value.trim().toLowerCase();
+  const errEl=document.getElementById('auth-error');
+  if(!email||!email.includes('@')){errEl.textContent='כתובת אימייל לא תקינה';errEl.style.display='block';return;}
+  const users=getUsers();
+  if(isRegister){
+    const name=document.getElementById('auth-name').value.trim();
+    if(!name){errEl.textContent='אנא הכנס שם';errEl.style.display='block';return;}
+    if(users[email]){errEl.textContent='אימייל כבר קיים';errEl.style.display='block';return;}
+    users[email]={name,messages:[],profile:{},goals:[],stats:{days:[],streak:0},plan:null,weights:{}};
+    saveUsers(users);
+    showNotif('✅ החשבון נוצר!');
+  } else {
+    if(!users[email]){errEl.textContent='אימייל לא נמצא — הירשם תחילה';errEl.style.display='block';return;}
+  }
+  currentUser=email;
+  localStorage.setItem(CUR_KEY,email);
+  enterApp();
+}
+function logout(){
+  currentUser=null;localStorage.removeItem(CUR_KEY);
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('messages').innerHTML='<div class="empty-state" id="empty-state"><div class="empty-icon">🤖</div><h3>המאמן האישי שלך מוכן</h3><p>שאל אותי על תוכנית אימונים, תזונה, שיפור ביצועים</p></div>';
+  document.getElementById('auth-email').value='';
+  document.getElementById('auth-error').style.display='none';
+}
+function enterApp(){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app-screen').style.display='flex';
+  const data=getUD()[currentUser]||getUsers()[currentUser];
+  const name=data.name||currentUser.split('@')[0];
+  document.getElementById('hdr-name').textContent=name;
+  document.getElementById('hdr-avatar').textContent=name[0].toUpperCase();
+  loadProfile(data.profile||{});
+  loadGoals(data.goals||[]);
+  loadMessages(data.messages||[]);
+  if(data.plan) renderPlan(data.plan);
+  updateStats();
+}
+
+// ── TABS ──
+function showTab(t){
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['chat','plan','metrics'][i]===t));
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+t).classList.add('active');
+  if(t==='metrics') setTimeout(initMetricsPage,50);
+}
+
+// ── PROFILE & GOALS ──
+function loadProfile(p){
+  if(p.birthMonth) document.getElementById('p-birth-month').value=p.birthMonth;
+  if(p.birthYear) document.getElementById('p-birth-year').value=p.birthYear;
+  if(p.birthMonth||p.birthYear) updateAgeDisplay();
+  if(p.weight) document.getElementById('p-weight').value=p.weight;
+  if(p.height) document.getElementById('p-height').value=p.height;
+  if(p.level) document.getElementById('p-level').value=p.level;
+  if(p.gender) document.getElementById('p-gender').value=p.gender;
+}
+function saveProfile(){
+  if(!currentUser)return;
+  const u=getUsers();
+  const birthMonth=document.getElementById('p-birth-month').value;
+  const birthYear=document.getElementById('p-birth-year').value;
+  const age=calcAge(birthMonth,birthYear);
+  const newWeight=document.getElementById('p-weight').value;
+  const oldWeight=(u[currentUser].profile||{}).weight;
+  u[currentUser].profile={
+    birthMonth,birthYear,age,
+    weight:newWeight,
+    height:document.getElementById('p-height').value,
+    level:document.getElementById('p-level').value,
+    gender:document.getElementById('p-gender').value
+  };
+  // sync weight to metrics if changed or first time
+  if(newWeight&&newWeight!==oldWeight){
+    const today=new Date().toISOString().split('T')[0];
+    if(!u[currentUser].metrics)u[currentUser].metrics=[];
+    let entry=u[currentUser].metrics.find(e=>e.date===today);
+    if(!entry){entry={date:today};u[currentUser].metrics.push(entry);}
+    entry.weight=newWeight;
+    // auto BMI
+    const h=u[currentUser].profile.height;
+    if(h) entry.bmi=(parseFloat(newWeight)/Math.pow(parseFloat(h)/100,2)).toFixed(1);
+    u[currentUser].metrics.sort((a,b)=>a.date.localeCompare(b.date));
+  }
+  saveUsers(u);
+  showNotif('✅ פרופיל נשמר!');
+}
+function loadGoals(goals){
+  if(!goals||!goals.length)return;
+  document.querySelectorAll('.goal-chip').forEach(c=>{
+    const onclick=c.getAttribute('onclick')||'';
+    const match=onclick.match(/toggleGoal\(this,'([^']+)'\)/);
+    if(match&&goals.includes(match[1])) c.classList.add('active');
+  });
+}
+function toggleGoal(el,goal){
+  el.classList.toggle('active');
+  if(!currentUser)return;
+  const u=getUsers();
+  const g=u[currentUser].goals||[];
+  const i=g.indexOf(goal);
+  if(i===-1)g.push(goal);else g.splice(i,1);
+  u[currentUser].goals=g;saveUsers(u);updateStats();
+}
+function saveWorkoutWeights(){
+  if(!currentUser)return;
+  const u=getUsers();
+  const weights=u[currentUser].weights||{};
+  document.querySelectorAll('.weight-input').forEach(inp=>{
+    if(inp.dataset.key&&inp.value) weights[inp.dataset.key]=inp.value;
+  });
+  u[currentUser].weights=weights;
+  const today=new Date().toDateString();
+  if(!u[currentUser].stats.days.includes(today)) u[currentUser].stats.days.push(today);
+  saveUsers(u);updateStats();
+  showNotif('✅ משקלים נשמרו! כל הכבוד!');
+}
+
+// ── CHAT ──
+function loadMessages(msgs){
+  const c=document.getElementById('messages');
+  if(!msgs.length)return;
+  c.innerHTML='';
+  msgs.forEach(m=>renderMsg(m.role,m.content,m.time,false));
+}
+function renderMsg(role,content,time,animate=true){
+  const c=document.getElementById('messages');
+  const empty=document.getElementById('empty-state');
+  if(empty)empty.remove();
+  const div=document.createElement('div');
+  div.className=`msg ${role==='user'?'user':'ai'}`;
+  if(!animate)div.style.animation='none';
+  const u=getUsers();
+  const name=currentUser&&u[currentUser]?(u[currentUser].name||currentUser.split('@')[0]):'U';
+  const av=role==='user'?name[0].toUpperCase():'🤖';
+  // Check if AI message looks like a workout plan
+  const isPlanMsg=role==='ai'&&(
+    content.includes('```json') ||
+    content.includes('"days"') ||
+    content.includes('"exercises"') ||
+    ((content.includes('אימון א') || content.includes('אימון A') || content.includes('Push') || content.includes('Pull') || content.includes('Legs') || content.includes('UPPER') || content.includes('LOWER') || content.includes('Full Body')) &&
+    (content.includes('סטים') || content.includes('חזרות') || content.includes('sets') || content.includes('reps') || content.includes('×')))
+  );
+  const planBtn=isPlanMsg
+    ? `<button class="save-as-plan-btn" onclick="convertMsgToPlan(this)">📋 שמור כתוכנית אימונים</button>`
+    : '';
+  div.innerHTML=`<div class="msg-avatar">${av}</div><div><div class="msg-bubble">${content}</div>${planBtn}<div class="msg-meta">${time||new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</div></div>`;
+  c.appendChild(div);c.scrollTop=c.scrollHeight;
+}
+function showTyping(){
+  const c=document.getElementById('messages');
+  const d=document.createElement('div');d.className='msg ai';d.id='typing-indicator';
+  d.innerHTML='<div class="msg-avatar">🤖</div><div class="msg-bubble typing-bubble"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+  c.appendChild(d);c.scrollTop=c.scrollHeight;
+}
+function removeTyping(){const t=document.getElementById('typing-indicator');if(t)t.remove();}
+
+async function sendMessage(text){
+  if(!currentUser)return;
+  const input=document.getElementById('chat-input');
+  const msg=text||input.value.trim();
+  if(!msg)return;
+  input.value='';input.style.height='auto';
+  const time=new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  renderMsg('user',msg,time);
+  const u=getUsers();
+  if(!u[currentUser])u[currentUser]={name:currentUser.split('@')[0],messages:[],profile:{},goals:[],stats:{days:[],streak:0},plan:null,weights:{},memories:[]};
+  if(!u[currentUser].messages)u[currentUser].messages=[];
+  if(!u[currentUser].stats)u[currentUser].stats={days:[],streak:0};
+  if(!u[currentUser].memories)u[currentUser].memories=[];
+  u[currentUser].messages.push({role:'user',content:msg,time});
+  const today=new Date().toDateString();
+  if(!u[currentUser].stats.days.includes(today))u[currentUser].stats.days.push(today);
+  saveUsers(u);updateStats();
+  showTyping();
+  document.getElementById('quick-prompts').style.display='none';
+  try{
+    const p=u[currentUser].profile||{};
+    const userName=u[currentUser].name||currentUser.split('@')[0];
+    const goals=(u[currentUser].goals||[]).join(', ')||'לא צוינו';
+    const gender=p.gender||'לא צוין';
+    const age=p.age?`${p.age} שנים`:'לא צוין';
+    const weight=p.weight?`${p.weight} ק"ג`:'לא צוין';
+    const height=p.height?`${p.height} ס"מ`:'לא צוין';
+    const level=p.level||'לא צוין';
+    const currentPlan=u[currentUser].plan;
+    const planSummary=currentPlan
+      ? `תוכנית האימונים הנוכחית: "${currentPlan.title}" — ${currentPlan.days.length} אימונים: ${currentPlan.days.map(d=>d.name).join(' | ')}`
+      : 'אין תוכנית אימונים פעילה כרגע';
+    const profileInfo=`מין: ${gender} | גיל: ${age} | משקל: ${weight} | גובה: ${height} | רמה: ${level}`;
+    // Build memory context
+    const memories=(u[currentUser].memories||[]).map(m=>`• ${m}`).join('\n')||'אין עדיין זיכרונות';
+    const baseSystem=`אתה FitMind — מאמן כושר ובריאות AI מקצועי ואישי. אתה מדבר בעברית, בטון חם, מקצועי ומעודד.
+
+משתמש: ${userName}
+פרופיל: ${profileInfo}
+מטרות: ${goals}
+${planSummary}
+
+זיכרונות חשובים מהיסטוריית השיחות:
+${memories}
+
+הנחיות:
+- התאם תשובות לפרופיל ולרמה של המשתמש
+- אם המשתמש מזכיר מידע חשוב (פציעה, העדפה, הצלחה, קושי, ציוד, מגבלה) — סיים תשובתך עם: [MEMORY: תיאור קצר]
+- אל תוסיף MEMORY על דברים טריוויאליים, רק על מידע שישפיע על עצות עתידיות`;
+    const isPlanRequest=/(תוכנית|פלאן|ppl|push|pull|legs|ימי אימון|אימונים לשבוע|בנה לי|צור לי|תוכנית אימונים)/i.test(msg);
+    const planSys=`You are a fitness coach API. Output ONLY a single raw JSON object. No markdown. No code fences. No explanation. No text outside the JSON.
+Required structure: {"title":"string","days":[{"name":"string","exercises":[{"name":"string","sets":3,"reps":"10-12","rest":"60 שניות","notes":"string"}]}]}
+User: ${userName}, Profile: ${profileInfo}, Goals: ${goals}, Memories: ${memories}
+Generate a complete workout plan in Hebrew based on the user request.`;
+    const sys=isPlanRequest ? planSys : baseSystem;
+    const history=isPlanRequest
+      ? [{role:'user',content:msg}]
+      : (u[currentUser].messages||[]).slice(-8).map(m=>({role:m.role==='user'?'user':'assistant',content:m.content}));
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':'YOUR_ANTHROPIC_API_KEY','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:4000,system:sys,messages:history})});
+    const data=await res.json();
+    removeTyping();
+    // Show API error details if present
+    if(data.error){
+      const errMsg=data.error.message||JSON.stringify(data.error);
+      renderMsg('ai','❌ שגיאת API: '+errMsg,'');
+      return;
+    }
+    let reply=data.content?.[0]?.text||'מצטער, לא הצלחתי לענות.';
+    if(isPlanRequest){
+      const plan=tryExtractPlan(reply);
+      if(plan){
+        savePlan(plan);
+        const replyTime=new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+        renderMsg('ai','✅ התוכנית מוכנה! לחץ על הטאב "📋 תוכנית אימונים" לצפייה.',replyTime);
+        u[currentUser].messages.push({role:'ai',content:'✅ התוכנית מוכנה!',time:replyTime});
+        saveUsers(u);updateStats();
+        return;
+      }
+    }
+    // Extract memory tag if present
+    const memMatch=reply.match(/\[MEMORY:\s*([^\]]+)\]/);
+    if(memMatch){
+      if(!u[currentUser].memories)u[currentUser].memories=[];
+      const mem=memMatch[1].trim();
+      if(!u[currentUser].memories.includes(mem)) u[currentUser].memories.push(mem);
+      reply=reply.replace(/\[MEMORY:[^\]]+\]/,'').trim();
+    }
+    const replyTime=new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+    renderMsg('ai',reply,replyTime);
+    u[currentUser].messages.push({role:'ai',content:reply,time:replyTime});
+    saveUsers(u);updateStats();
+  }catch(e){
+    removeTyping();
+    renderMsg('ai','❌ שגיאה: '+e.message,'');
+    console.error('FitMind error:',e);
+  }
+}
+function clearChat(){
+  if(!currentUser)return;
+  const btn=document.querySelector('[onclick="clearChat()"]');
+  if(btn.dataset.confirm!=='yes'){
+    btn.textContent='❓ בטוח?';
+    btn.dataset.confirm='yes';
+    setTimeout(()=>{btn.textContent='🗑️ נקה שיחה';btn.dataset.confirm='';},3000);
+    return;
+  }
+  btn.dataset.confirm='';
+  btn.textContent='🗑️ נקה שיחה';
+  const u=getUsers();
+  u[currentUser].messages=[];
+  saveUsers(u);
+  document.getElementById('messages').innerHTML='<div class="empty-state" id="empty-state"><div class="empty-icon">🤖</div><h3>המאמן האישי שלך מוכן</h3><p>שאל אותי על תוכנית אימונים, תזונה, שיפור ביצועים</p></div>';
+  document.getElementById('quick-prompts').style.display='flex';
+  updateStats();
+  showNotif('🗑️ היסטוריה נמחקה');
+}
+function quickSend(t){sendMessage(t);}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+
+// ── PLAN ──
+function savePlan(plan){
+  const u=getUsers();
+  u[currentUser].plan=plan;
+  saveUsers(u);
+  renderPlan(plan);
+  showNotif('📋 תוכנית חדשה נשמרה!');
+  document.getElementById('plan-tab').style.color='var(--accent)';
+}
+function clearPlan(){
+  const u=getUsers();u[currentUser].plan=null;saveUsers(u);
+  document.getElementById('plan-empty').style.display='flex';
+  document.getElementById('plan-content').style.display='none';
+  updateStats();
+}
+function renderPlan(plan){
+  document.getElementById('plan-empty').style.display='none';
+  const content=document.getElementById('plan-content');
+  content.style.display='block';
+  document.getElementById('plan-title').textContent=plan.title||'תוכנית אימונים';
+  document.getElementById('plan-subtitle').textContent=`${plan.days.length} אימונים • לחץ על אימון כדי לראות תרגילים`;
+  const u=getUsers();
+  const weights=(u[currentUser]&&u[currentUser].weights)||{};
+  // tabs
+  const tabsEl=document.getElementById('workout-tabs');
+  const daysEl=document.getElementById('workout-days');
+  tabsEl.innerHTML='';daysEl.innerHTML='';
+  plan.days.forEach((day,di)=>{
+    const tab=document.createElement('div');
+    tab.className='w-tab'+(di===0?' active':'');
+    tab.textContent=day.name;
+    tab.onclick=()=>{
+      document.querySelectorAll('.w-tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.workout-day').forEach(d=>d.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('wday-'+di).classList.add('active');
+    };
+    tabsEl.appendChild(tab);
+    const dayDiv=document.createElement('div');
+    dayDiv.className='workout-day'+(di===0?' active':'');
+    dayDiv.id='wday-'+di;
+    dayDiv.innerHTML=`<div class="day-label">${day.name}</div><div class="exercise-grid" id="exgrid-${di}"></div>`;
+    daysEl.appendChild(dayDiv);
+    const grid=dayDiv.querySelector('.exercise-grid');
+    const exercises=day.exercises||[];
+    // classify exercises
+    const warmKeywords=/(חימום|warm.?up|ווארם|מתיחה דינמי|הליכה|ריצה קלה|אירובי קל|ג'אמפינג|jumping|mobility|ניידות|סיבוב מפרק|סיבובי|cat.cow|high.knee|butt.kick|leg.swing|glute.bridge|זחיל|עכביש|spider|arm.circle|chest.opener|סיבוב זרוע|פלאנק עם נגיעה)/i;
+    const coolKeywords=/(שחרור|cool.?down|קולדאון|מתיחות|מתיחת|stretching|גמישות|נשימה|הרפיה|foam|פוםרול|child.?s.?pose|cobra.?pose)/i;
+    // also check notes field
+    const getExType=ex=>{
+      const t=(ex.name||'')+' '+(ex.notes||'');
+      if(warmKeywords.test(t)) return 'warm';
+      if(coolKeywords.test(t)) return 'cool';
+      return 'main';
+    };
+    const getSection=ex=>ex.type&&['warm','cool','main'].includes(ex.type)?ex.type:getExType(ex);
+    const sections={warm:[],main:[],cool:[]};
+    exercises.forEach((ex,ei)=>sections[getSection(ex)].push({ex,ei}));
+    const sectionDefs=[
+      {key:'warm', label:'🔥 חימום',      cls:'ex-section-warm'},
+      {key:'main', label:'💪 אימון עיקרי', cls:'ex-section-main'},
+      {key:'cool', label:'🧊 שחרור',       cls:'ex-section-cool'},
+    ];
+    sectionDefs.forEach(({key,label,cls})=>{
+      if(!sections[key].length) return;
+      // section header
+      const hdr=document.createElement('div');
+      hdr.className=`ex-section-label ${cls}`;
+      hdr.innerHTML=`<span></span>${label}<span></span>`;
+      grid.appendChild(hdr);
+      sections[key].forEach(({ex,ei})=>{
+        const meta=getMeta(ex.name);
+        const card=document.createElement('div');
+        card.className='ex-card'+(key!=='main'?' '+key:'');
+        const wKey=`${di}-${ei}`;
+        const savedW=weights[wKey]||'';
+        const ytQuery=encodeURIComponent(ex.name+' exercise tutorial form');
+        const setsHTML=buildSetsTable(ex,wKey,savedW);
+        card.innerHTML=`
+          <div class="ex-top">
+            <div class="ex-anim" id="exanim-${di}-${ei}">
+            ${meta.emoji}
+          </div>
+          </div>
+            <div class="ex-info">
+              <div class="ex-name">${ex.name}</div>
+              <div class="ex-muscle">${meta.muscle}</div>
+              <div class="ex-sets-summary">${ex.sets} סטים × ${ex.reps} חזרות | מנוחה: ${ex.rest||'60 שניות'}</div>
+              ${ex.notes?`<div style="font-size:12px;color:var(--text3);margin-top:4px;">💡 ${ex.notes}</div>`:''}
+            </div>
+          </div>
+          ${setsHTML}
+          <div class="ex-actions">
+            <button class="ex-btn" onclick="toggleSets(this)">📊 משקלים</button>
+            <button class="ex-btn yt" onclick="openYT('${ytQuery}')">▶ סרטון הדרכה</button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    });
+  });
+  updateStats();
+}
+function buildSetsTable(ex,wKey,savedW){
+  let rows='';
+  for(let s=1;s<=ex.sets;s++){
+    const key=`${wKey}-${s}`;
+    rows+=`<tr>
+      <td>סט ${s}</td>
+      <td>${ex.reps}</td>
+      <td><input class="weight-input" type="number" placeholder="ק"ג" data-key="${key}" value="${savedW||''}" min="0" step="0.5"/></td>
+      <td><div class="set-done" onclick="this.classList.toggle('checked')"></div></td>
+    </tr>`;
+  }
+  return `<table class="sets-table">
+    <thead><tr><th>סט</th><th>חזרות</th><th>משקל</th><th>✓</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+function toggleSets(btn){
+  const table=btn.closest('.ex-card').querySelector('.sets-table');
+  table.classList.toggle('open');
+  btn.textContent=table.classList.contains('open')?'📊 סגור':'📊 משקלים';
+}
+function openYT(query){
+  window.open('https://www.youtube.com/results?search_query='+query,'_blank');
+}
+
+// ── PLAN EXTRACTOR ──
+function tryExtractPlan(text){
+  try{ const p=JSON.parse(text.trim()); if(p&&p.days) return p; }catch(e){}
+  const fenced=text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if(fenced){ try{ const p=JSON.parse(fenced[1].trim()); if(p&&p.days) return p; }catch(e){} }
+  const first=text.indexOf('{'), last=text.lastIndexOf('}');
+  if(first!==-1&&last>first){ try{ const p=JSON.parse(text.slice(first,last+1)); if(p&&p.days) return p; }catch(e){} }
+  return null;
+}
+
+// ── AGE CALC ──
+function calcAge(month,year){
+  if(!month||!year||year.length<4)return null;
+  const now=new Date();
+  let age=now.getFullYear()-parseInt(year);
+  if(now.getMonth()+1<parseInt(month))age--;
+  return age>0&&age<120?age:null;
+}
+function updateAgeDisplay(){
+  const m=document.getElementById('p-birth-month').value;
+  const y=document.getElementById('p-birth-year').value;
+  const age=calcAge(m,y);
+  const el=document.getElementById('age-display');
+  el.textContent=age?`גיל: ${age}`:'';
+}
+
+
+// ── METRICS ──
+const METRIC_DEFS = [
+  {key:'weight',   label:'משקל גוף',      unit:'ק"ג',  color:'#4fffb0'},
+  {key:'fat',      label:'אחוז שומן',      unit:'%',    color:'#ff9f43'},
+  {key:'muscle',   label:'מסת שריר',       unit:'ק"ג',  color:'#00d4ff'},
+  {key:'bmi',      label:'BMI',            unit:'',     color:'#a29bfe'},
+  {key:'waist',    label:'היקף מותניים',   unit:'ס"מ',  color:'#fd79a8'},
+  {key:'chest',    label:'היקף חזה',       unit:'ס"מ',  color:'#55efc4'},
+  {key:'arms',     label:'היקף זרועות',    unit:'ס"מ',  color:'#fdcb6e'},
+  {key:'bp',       label:'לחץ דם',         unit:'',     color:'#e17055'},
+];
+
+let activeMetric='weight';
+let metricsChart=null;
+
+function initMetricsPage(){
+  const u=getUsers();
+  const entries=u[currentUser]?.metrics||[];
+  // build selector with latest value per metric
+  const sel=document.getElementById('metric-selector');
+  sel.innerHTML='';
+  METRIC_DEFS.forEach(m=>{
+    // find latest value
+    const latest=[...entries].reverse().find(e=>e[m.key]);
+    const latestStr=latest?`${latest[m.key]} ${m.unit}`:'';
+    const d=document.createElement('div');
+    d.className='metric-radio'+(m.key===activeMetric?' active':'');
+    d.dataset.key=m.key;
+    d.innerHTML=`<div class="metric-radio-left"><span style="width:9px;height:9px;border-radius:50%;background:${m.color};flex-shrink:0;"></span>${m.label}</div><span class="metric-latest">${latestStr}</span>`;
+    d.onclick=()=>{
+      activeMetric=m.key;
+      document.querySelectorAll('.metric-radio').forEach(r=>r.classList.toggle('active',r.dataset.key===m.key));
+      renderMetricsChart();
+      renderMetricsHistory();
+    };
+    sel.appendChild(d);
+  });
+  // build only the active metric's input field
+  const fieldsEl=document.getElementById('metrics-fields');
+  fieldsEl.innerHTML='';
+  METRIC_DEFS.forEach(m=>{
+    fieldsEl.innerHTML+=`<div class="m-label">${m.label}${m.unit?' ('+m.unit+')':''}</div><input type="${m.key==='bp'?'text':'number'}" class="m-input" id="mf-${m.key}" placeholder="${m.key==='bp'?'120/80':''}" step="0.1"/>`;
+  });
+  // set today's date
+  const d=document.getElementById('m-date');
+  if(d&&!d.value) d.value=new Date().toISOString().split('T')[0];
+  renderMetricsChart();
+  renderMetricsHistory();
+}
+
+function saveMetricsEntry(){
+  if(!currentUser)return;
+  const date=document.getElementById('m-date').value;
+  if(!date){showNotif('⚠️ בחר תאריך');return;}
+  const entry={date};
+  let hasVal=false;
+  METRIC_DEFS.forEach(m=>{
+    const v=document.getElementById('mf-'+m.key)?.value?.trim();
+    if(v){entry[m.key]=v;hasVal=true;}
+  });
+  if(!hasVal){showNotif('⚠️ הכנס לפחות מדד אחד');return;}
+  // auto-calc BMI if weight+height available
+  const u=getUsers();
+  const p=u[currentUser].profile||{};
+  if(entry.weight&&p.height&&!entry.bmi){
+    const bmi=(parseFloat(entry.weight)/Math.pow(parseFloat(p.height)/100,2));
+    entry.bmi=bmi.toFixed(1);
+  }
+  if(!u[currentUser].metrics)u[currentUser].metrics=[];
+  // remove existing entry for same date
+  u[currentUser].metrics=u[currentUser].metrics.filter(e=>e.date!==date);
+  u[currentUser].metrics.push(entry);
+  u[currentUser].metrics.sort((a,b)=>a.date.localeCompare(b.date));
+  // sync weight back to profile
+  if(entry.weight){
+    u[currentUser].profile=u[currentUser].profile||{};
+    u[currentUser].profile.weight=entry.weight;
+    const weightInput=document.getElementById('p-weight');
+    if(weightInput) weightInput.value=entry.weight;
+  }
+  saveUsers(u);
+  showNotif('✅ מדידה נשמרה!');
+  renderMetricsChart();
+  renderMetricsHistory();
+  // refresh selector to show updated latest values
+  initMetricsPage();
+  // clear fields
+  METRIC_DEFS.forEach(m=>{ const el=document.getElementById('mf-'+m.key); if(el)el.value=''; });
+}
+
+function renderMetricsChart(){
+  if(!currentUser)return;
+  const u=getUsers();
+  const entries=(u[currentUser].metrics||[]);
+  const def=METRIC_DEFS.find(m=>m.key===activeMetric);
+  if(!def)return;
+  document.getElementById('chart-title').textContent=`${def.label}${def.unit?' ('+def.unit+')':''} לאורך זמן`;
+  const canvas=document.getElementById('metrics-canvas');
+  const labels=entries.map(e=>{ const d=new Date(e.date); return `${d.getDate()}/${d.getMonth()+1}`; });
+  const data=entries.map(e=>e[activeMetric]?parseFloat(e[activeMetric]):null).filter(v=>v!==null);
+  const allData=entries.map(e=>e[activeMetric]?parseFloat(e[activeMetric]):null).filter(v=>v!==null);
+  if(metricsChart){metricsChart.destroy();metricsChart=null;}
+  if(!window.Chart){return;}
+
+  // Smart Y axis: tight range around actual values
+  let yMin, yMax, stepSize;
+  if(allData.length>=2){
+    const min=Math.min(...allData), max=Math.max(...allData);
+    const spread=Math.max(max-min, 1);
+    const pad=Math.max(spread*0.4, 2);
+    yMin=parseFloat((min-pad).toFixed(1));
+    yMax=parseFloat((max+pad).toFixed(1));
+    // stepSize: aim for ~4-5 gridlines
+    const range=yMax-yMin;
+    const rawStep=range/4;
+    const magnitude=Math.pow(10,Math.floor(Math.log10(rawStep)));
+    stepSize=Math.ceil(rawStep/magnitude)*magnitude;
+  }
+
+  const chartLabels=entries.map(e=>{ const d=new Date(e.date); return `${d.getDate()}/${d.getMonth()+1}`; });
+  const chartData=entries.map(e=>e[activeMetric]?parseFloat(e[activeMetric]):null);
+
+  const ctx=canvas.getContext('2d');
+  metricsChart=new window.Chart(ctx,{
+    type:'line',
+    data:{
+      labels:chartLabels,
+      datasets:[{
+        label:def.label,
+        data:chartData,
+        borderColor:def.color,
+        backgroundColor:def.color+'18',
+        borderWidth:2.5,
+        pointBackgroundColor:def.color,
+        pointBorderColor:'#080a0f',
+        pointBorderWidth:2,
+        pointRadius:5,
+        pointHoverRadius:7,
+        tension:0.3,
+        fill:true,
+        spanGaps:true,
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#1c2230',
+          titleColor:'#e8edf5',
+          bodyColor:def.color,
+          borderColor:'rgba(255,255,255,0.1)',
+          borderWidth:1,
+          padding:10,
+          callbacks:{label:ctx=>`  ${ctx.parsed.y} ${def.unit}`}
+        }
+      },
+      scales:{
+        x:{
+          grid:{color:'rgba(255,255,255,0.04)'},
+          ticks:{color:'#4a5568',font:{size:11},maxTicksLimit:8}
+        },
+        y:{
+          grid:{color:'rgba(255,255,255,0.04)'},
+          ticks:{
+            color:'#4a5568',
+            font:{size:11},
+            maxTicksLimit:5,
+            stepSize: stepSize||undefined,
+            callback: v => v % 1 === 0 ? v : v.toFixed(1)
+          },
+          min: yMin,
+          max: yMax,
+        }
+      }
+    }
+  });
+}
+
+function renderMetricsHistory(){
+  if(!currentUser)return;
+  const u=getUsers();
+  const def=METRIC_DEFS.find(m=>m.key===activeMetric);
+  const entries=[...(u[currentUser].metrics||[])].filter(e=>e[activeMetric]).reverse();
+  const el=document.getElementById('metrics-history');
+  const label=document.getElementById('history-label');
+  if(label&&def) label.textContent=`היסטוריה — ${def.label}`;
+  if(!entries.length){ el.innerHTML=`<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px;">אין מדידות עדיין עבור ${def?.label||'מדד זה'}</div>`; return; }
+  el.innerHTML=entries.map((entry,i)=>{
+    const prev=entries[i+1];
+    let delta='';
+    if(prev&&prev[activeMetric]){
+      const diff=(parseFloat(entry[activeMetric])-parseFloat(prev[activeMetric])).toFixed(1);
+      const cls=parseFloat(diff)>0?'delta-up':parseFloat(diff)<0?'delta-down':'delta-same';
+      const arrow=parseFloat(diff)>0?'↑':parseFloat(diff)<0?'↓':'→';
+      delta=`<span class="delta-badge ${cls}">${arrow}${Math.abs(diff)} ${def.unit}</span>`;
+    }
+    const d=new Date(entry.date);
+    const dateStr=`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+    return `<div class="history-row"><span class="history-date">${dateStr}</span><div style="display:flex;align-items:center;gap:8px;"><span class="history-val">${entry[activeMetric]} ${def.unit}</span>${delta}</div></div>`;
+  }).join('');
+}
+
+function clearMetricsHistory(){
+  
+  const u=getUsers();
+  u[currentUser].metrics=[];
+  saveUsers(u);
+  renderMetricsChart();
+  renderMetricsHistory();
+  showNotif('🗑️ ההיסטוריה נמחקה');
+}
+
+// ── STATS ──
+function updateStats(){
+  if(!currentUser)return;
+  const u=getUsers();const d=u[currentUser];if(!d)return;
+  document.getElementById('stat-msgs').textContent=(d.messages||[]).filter(m=>m.role==='user').length;
+  document.getElementById('stat-days').textContent=(d.stats?.days||[]).length;
+  document.getElementById('stat-goals').textContent=(d.goals||[]).length;
+  const exCount=d.plan?d.plan.days.reduce((s,day)=>s+(day.exercises||[]).length,0):0;
+  document.getElementById('stat-exs').textContent=exCount;
+}
+
+// ── NOTIF ──
+function showNotif(t){const n=document.getElementById('notif');n.textContent=t;n.classList.add('show');setTimeout(()=>n.classList.remove('show'),3000);}
+
+// ── INIT ──
+async function convertMsgToPlan(btn){
+  if(!currentUser)return;
+  const bubble=btn.closest('.msg').querySelector('.msg-bubble');
+  const msgText=bubble.textContent;
+  btn.textContent='⏳ ממיר לתוכנית...';
+  btn.disabled=true;
+  const u=getUsers();
+  const p=u[currentUser].profile||{};
+  const userName=u[currentUser].name||currentUser.split('@')[0];
+  const convertSys=`You are a fitness coach API. Convert the Hebrew workout plan text to a structured JSON object. Output ONLY raw JSON, no markdown, no code fences, no text before or after.
+Required structure: {"title":"string","days":[{"name":"string","exercises":[{"name":"string","sets":3,"reps":"10-12","rest":"60 שניות","notes":"string","type":"warm|main|cool"}]}]}
+Rules:
+- type "warm" = warmup exercises (חימום, warm-up, dynamic stretching, סיבובים, הליכה קלה)
+- type "cool" = cooldown exercises (מתיחות, שחרור, cool-down, child pose, cobra)
+- type "main" = all other exercises
+- Keep Hebrew text. Extract sets/reps/rest from text. Use defaults if not specified.`;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':'YOUR_ANTHROPIC_API_KEY','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:4000,system:convertSys,messages:[{role:'user',content:'המר את תוכנית האימונים הבאה ל-JSON. חשוב: כלול רק את רשימת התרגילים עם סטים וחזרות, ללא הסברים ארוכים בשדה notes.\n\n'+msgText.slice(0,6000)}]})});
+    const data=await res.json();
+    if(data.error){btn.textContent='❌ שגיאה';return;}
+    const reply=data.content?.[0]?.text||'';
+    const plan=tryExtractPlan(reply);
+    if(plan){
+      savePlan(plan);
+      btn.textContent='✅ נשמר!';
+      btn.style.background='rgba(79,255,176,.2)';
+      showNotif('📋 התוכנית נשמרה! עבור לטאב תוכנית אימונים');
+    } else {
+      btn.textContent='❌ לא הצלחתי לפרסר';
+    }
+  }catch(e){
+    btn.textContent='❌ שגיאה: '+e.message;
+  }
+}
+
+function openPlanBuilder(){
+  document.getElementById('plan-modal').style.display='flex';
+  document.getElementById('plan-prompt').focus();
+}
+function closePlanModal(){
+  document.getElementById('plan-modal').style.display='none';
+  document.getElementById('plan-prompt').value='';
+}
+async function submitPlanBuilder(){
+  const prompt=document.getElementById('plan-prompt').value.trim();
+  if(!prompt){showNotif('⚠️ תאר את התוכנית שאתה רוצה');return;}
+  closePlanModal();
+  showTab('chat');
+  // Force plan mode
+  const input=document.getElementById('chat-input');
+  input.value=prompt;
+  await buildPlanDirect(prompt);
+}
+async function buildPlanDirect(prompt){
+  if(!currentUser)return;
+  const u=getUsers();
+  const time=new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  renderMsg('user',prompt,time);
+  u[currentUser].messages=u[currentUser].messages||[];
+  u[currentUser].messages.push({role:'user',content:prompt,time});
+  document.getElementById('chat-input').value='';
+  document.getElementById('quick-prompts').style.display='none';
+  showTyping();
+  const p=u[currentUser].profile||{};
+  const userName=u[currentUser].name||currentUser.split('@')[0];
+  const goals=(u[currentUser].goals||[]).join(', ')||'לא צוינו';
+  const gender=p.gender||'לא צוין';
+  const age=p.age?`${p.age} שנים`:'לא צוין';
+  const weight=p.weight?`${p.weight} ק"ג`:'לא צוין';
+  const height=p.height?`${p.height} ס"מ`:'לא צוין';
+  const level=p.level||'לא צוין';
+  const memories=(u[currentUser].memories||[]).map(m=>`• ${m}`).join('\n')||'';
+  const profileInfo=`מין: ${gender} | גיל: ${age} | משקל: ${weight} | גובה: ${height} | רמה: ${level}`;
+  const planSys=`You are a fitness coach API. Output ONLY a single raw JSON object. No markdown. No code fences. No text before or after the JSON.
+Required JSON structure: {"title":"string","days":[{"name":"string","exercises":[{"name":"string","sets":3,"reps":"10-12","rest":"60 שניות","notes":"string"}]}]}
+User: ${userName} | Profile: ${profileInfo} | Goals: ${goals}${memories?'\nMemories: '+memories:''}
+Build the workout plan based on: ${prompt}
+All text values must be in Hebrew.`;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':'YOUR_ANTHROPIC_API_KEY','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:4000,system:planSys,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    removeTyping();
+    if(data.error){renderMsg('ai','❌ שגיאת API: '+(data.error.message||JSON.stringify(data.error)),'');return;}
+    const reply=data.content?.[0]?.text||'';
+    const plan=tryExtractPlan(reply);
+    if(plan){
+      savePlan(plan);
+      const rt=new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+      renderMsg('ai','✅ התוכנית מוכנה! לחץ על הטאב "📋 תוכנית אימונים" לצפייה.',rt);
+      u[currentUser].messages.push({role:'ai',content:'✅ התוכנית מוכנה!',time:rt});
+      saveUsers(u);updateStats();
+    } else {
+      renderMsg('ai','לא הצלחתי לבנות תוכנית. נסה לנסח מחדש.','');
+    }
+  }catch(e){
+    removeTyping();
+    renderMsg('ai','❌ שגיאה: '+e.message,'');
+  }
+}
+
+window.onload=()=>{
+  const saved=localStorage.getItem(CUR_KEY);
+  if(saved){const u=getUsers();if(u[saved]){currentUser=saved;enterApp();}}
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</body>
+</html>
